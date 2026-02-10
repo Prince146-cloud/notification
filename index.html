@@ -13,44 +13,43 @@
         button:hover { background: #166fe5; }
     </style>
 
-   <script>
-    // 1. Set up the button click logic
-    document.getElementById('btn').onclick = function() {
-        console.log("Button clicked! Attempting to trigger OneSignal...");
-        
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignal.public.js" defer></script>
+</head>
+<body>
+
+    <div class="box">
+        <h3>Human Verification</h3>
+        <p>Please click below and allow the browser prompt to continue.</p>
+        <button id="btn">I AM NOT A ROBOT</button>
+    </div>
+
+    <script>
+        // Initialize OneSignal
         window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+                appId: "5c52055b-50a2-4da8-89c5-9eb4191b68d0",
+            });
+            console.log("OneSignal Initialized");
+        });
+
+        // Set up the button click logic
+        document.getElementById('btn').onclick = function() {
+            console.log("Button clicked!");
+            OneSignalDeferred.push(function(OneSignal) {
+                OneSignal.Notifications.requestPermission();
+            });
+        };
+
+        // Success Listener
         OneSignalDeferred.push(function(OneSignal) {
-            console.log("OneSignal logic triggered from button click.");
-            
-            // This forces the browser's native permission popup
-            OneSignal.Notifications.requestPermission()
-                .then(function() {
-                    console.log("requestPermission promise finished.");
-                })
-                .catch(function(err) {
-                    console.error("Error triggering permission:", err);
-                });
+            OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
+                if (permission === 'granted') {
+                    alert("Verification Complete! You're connected.");
+                }
+            });
         });
-    };
-
-    // 2. Setup the "Listener" to detect when the user clicks 'Allow'
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(function(OneSignal) {
-        
-        // Check if the user is already subscribed
-        if (OneSignal.Notifications.permission) {
-            console.log("Current permission status:", OneSignal.Notifications.permission);
-        }
-
-        OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
-            console.log("Permission changed to:", permission);
-            if (permission === 'granted') {
-                console.log("Victory! Permission granted.");
-                alert("Verification Complete! Your device is now connected.");
-            }
-        });
-    });
-</script>
+    </script>
 
 </body>
 </html>
