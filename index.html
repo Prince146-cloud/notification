@@ -2,72 +2,63 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verification Required</title>
-    <style>
-        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; margin: 0; }
-        .box { background: white; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 400px; }
-        h3 { color: #1c1e21; }
-        p { color: #606770; margin-bottom: 20px; }
-        button { background: #1877f2; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #166fe5; }
-    </style>
-
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignal.public.js" defer></script>
 </head>
 <body>
 
-    <div class="box">
-        <h3>Human Verification</h3>
-        <p>Please click below and allow the browser prompt to continue.</p>
-        <button id="btn">I AM NOT A ROBOT</button>
+    <div style="text-align:center; margin-top:100px; font-family: sans-serif;">
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: inline-block;">
+            <h3>Security Check</h3>
+            <p>Click the button and select <b>"Allow"</b> to verify.</p>
+            <button id="btn" style="background:#1877f2; color:white; border:none; padding:15px 30px; border-radius:5px; cursor:pointer; font-weight:bold;">
+                I AM NOT A ROBOT
+            </button>
+        </div>
     </div>
 
     <script>
-        // 1. Initialize the Queue
         window.OneSignalDeferred = window.OneSignalDeferred || [];
-
+        
+        // 1. Initialize with your specific IDs
         OneSignalDeferred.push(async function(OneSignal) {
             await OneSignal.init({
                 appId: "5c52055b-50a2-4da8-89c5-9eb4191b68d0",
-                allowLocalhostAsSecureOrigin: true 
+                safari_web_id: "web.onesignal.auto.081d2360-74df-41b0-afe2-959ef72fcc8c",
+                notifyButton: {
+                    enable: false, // We hide the bell because we use our own button
+                },
+                allowLocalhostAsSecureOrigin: true
             });
-            console.log("OneSignal: Successfully Initialized");
+            console.log("OneSignal: Initialized");
         });
 
-        // 2. Button Logic (Fixed to use the Internal OneSignal instance)
+        // 2. The Button Trigger
         document.getElementById('btn').onclick = function() {
-            console.log("Button clicked! Triggering prompt...");
+            console.log("Button clicked...");
             
-            // We use the Deferred queue again to ensure 'OneSignal' is defined
             window.OneSignalDeferred.push(async function(OneSignal) {
-                try {
-                    // Check current permission first
-                    const permission = OneSignal.Notifications.permission;
-                    console.log("Current status:", permission);
-
-                    if (permission) {
-                        // This triggers the native browser prompt
-                        await OneSignal.Notifications.requestPermission();
-                    } else {
-                        console.error("Notifications are not supported or blocked.");
-                    }
-                } catch (err) {
-                    console.error("OneSignal Prompt Error:", err);
+                const permission = OneSignal.Notifications.permission;
+                
+                if (permission === 'granted') {
+                    alert("You are already verified!");
+                } else {
+                    console.log("Requesting permission...");
+                    // This is what makes the browser popup appear
+                    await OneSignal.Notifications.requestPermission();
                 }
             });
         };
 
-        // 3. Status Listener
+        // 3. Optional: Redirect after they click "Allow"
         OneSignalDeferred.push(function(OneSignal) {
             OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
-                console.log("Permission changed to:", permission);
                 if (permission === 'granted') {
-                    alert("Verification Complete!");
+                    console.log("User subscribed!");
+                    // window.location.href = "https://google.com"; // Redirect them here
                 }
             });
         });
     </script>
-
 </body>
 </html>
