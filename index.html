@@ -14,60 +14,31 @@
     </style>
 
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignal.public.js" defer></script>
-</head>
-<body>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  
+  // 1. Init immediately
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "5c52055b-50a2-4da8-89c5-9eb4191b68d0",
+      safari_web_id: "web.onesignal.auto.081d2360-74df-41b0-afe2-959ef72fcc8c",
+      allowLocalhostAsSecureOrigin: true,
+    });
+  });
 
-    <div class="card">
-        <h2>Security Check</h2>
-        <p>Please click the button below and select <b>Allow</b> to prove you are not a robot.</p>
-        <button id="btn">I AM NOT A ROBOT</button>
-    </div>
-
-    <script>
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-
-        // 2. Initialize OneSignal
-        OneSignalDeferred.push(async function(OneSignal) {
-            await OneSignal.init({
-                appId: "5c52055b-50a2-4da8-89c5-9eb4191b68d0",
-                safari_web_id: "web.onesignal.auto.081d2360-74df-41b0-afe2-959ef72fcc8c",
-                allowLocalhostAsSecureOrigin: true,
-            });
-        });
-
-        // 3. The Button Trigger
-        document.getElementById('btn').onclick = function() {
-            console.log("Button clicked...");
-
-            window.OneSignalDeferred.push(async function(OneSignal) {
-                // Check if they already said yes
-                if (OneSignal.Notifications.permissionNative === 'granted') {
-                    alert("Verification already complete!");
-                    // window.location.href = "https://google.com"; // Redirect here
-                    return;
-                }
-
-                try {
-                    console.log("Triggering browser prompt...");
-                    // This is the magic line that shows the prompt
-                    await OneSignal.Notifications.requestPermission();
-                } catch (err) {
-                    console.error("Prompt failed to open:", err);
-                }
-            });
-        };
-
-        // 4. Redirect automatically after they click "Allow"
-        OneSignalDeferred.push(function(OneSignal) {
-            OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
-                if (permission === 'granted') {
-                    console.log("Permission granted! Redirecting...");
-                    setTimeout(() => {
-                        window.location.href = "https://www.google.com"; // Change to your destination
-                    }, 1000);
-                }
-            });
-        });
-    </script>
+  // 2. The Direct Trigger
+  document.getElementById('btn').onclick = function() {
+    // We use the queue, but we keep it minimal
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      console.log("Attempting prompt...");
+      try {
+        // This MUST be the first thing that happens after the click
+        await OneSignal.Notifications.requestPermission();
+      } catch (err) {
+        console.error("Critical Error:", err);
+      }
+    });
+  };
+</script>
 </body>
 </html>
