@@ -24,39 +24,46 @@
     </div>
 
     <script>
-        // 1. Initialize OneSignal immediately
+        // 1. Initialize the Queue
         window.OneSignalDeferred = window.OneSignalDeferred || [];
+
         OneSignalDeferred.push(async function(OneSignal) {
             await OneSignal.init({
                 appId: "5c52055b-50a2-4da8-89c5-9eb4191b68d0",
-                allowLocalhostAsSecureOrigin: true // Important for testing
+                allowLocalhostAsSecureOrigin: true 
             });
-            console.log("OneSignal Engine: Ready");
+            console.log("OneSignal: Successfully Initialized");
         });
 
-        // 2. Button Logic
+        // 2. Button Logic (Fixed to use the Internal OneSignal instance)
         document.getElementById('btn').onclick = function() {
             console.log("Button clicked! Triggering prompt...");
             
-            // Ensure OneSignal is defined before calling
-            if (window.OneSignalDeferred) {
-                OneSignalDeferred.push(function(OneSignal) {
-                    // This is the direct request to the browser
-                    OneSignal.Notifications.requestPermission();
-                });
-            } else {
-                console.error("OneSignal SDK not loaded yet.");
-            }
+            // We use the Deferred queue again to ensure 'OneSignal' is defined
+            window.OneSignalDeferred.push(async function(OneSignal) {
+                try {
+                    // Check current permission first
+                    const permission = OneSignal.Notifications.permission;
+                    console.log("Current status:", permission);
+
+                    if (permission) {
+                        // This triggers the native browser prompt
+                        await OneSignal.Notifications.requestPermission();
+                    } else {
+                        console.error("Notifications are not supported or blocked.");
+                    }
+                } catch (err) {
+                    console.error("OneSignal Prompt Error:", err);
+                }
+            });
         };
 
-        // 3. Listener for success
+        // 3. Status Listener
         OneSignalDeferred.push(function(OneSignal) {
             OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
-                console.log("New Permission Status:", permission);
+                console.log("Permission changed to:", permission);
                 if (permission === 'granted') {
-                    alert("Verification Complete! You're connected.");
-                    // In a real scenario, you would redirect the user here
-                    // window.location.href = "https://your-content.com";
+                    alert("Verification Complete!");
                 }
             });
         });
