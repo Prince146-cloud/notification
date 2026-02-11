@@ -14,31 +14,40 @@
     </style>
 
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignal.public.js" defer></script>
-<script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  
-  // 1. Init immediately
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "5c52055b-50a2-4da8-89c5-9eb4191b68d0",
-      safari_web_id: "web.onesignal.auto.081d2360-74df-41b0-afe2-959ef72fcc8c",
-      allowLocalhostAsSecureOrigin: true,
-    });
-  });
+</head>
+<body>
 
-  // 2. The Direct Trigger
-  document.getElementById('btn').onclick = function() {
-    // We use the queue, but we keep it minimal
-    window.OneSignalDeferred.push(async function(OneSignal) {
-      console.log("Attempting prompt...");
-      try {
-        // This MUST be the first thing that happens after the click
-        await OneSignal.Notifications.requestPermission();
-      } catch (err) {
-        console.error("Critical Error:", err);
-      }
-    });
-  };
-</script>
+    <div class="card">
+        <h2>Security Check</h2>
+        <p>Please click the button below and select <b>Allow</b> to prove you are not a robot.</p>
+        <button id="btn">I AM NOT A ROBOT</button>
+    </div>
+
+    <script>
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        
+        OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+                appId: "5c52055b-50a2-4da8-89c5-9eb4191b68d0",
+                safari_web_id: "web.onesignal.auto.081d2360-74df-41b0-afe2-959ef72fcc8c",
+                allowLocalhostAsSecureOrigin: true,
+            });
+        });
+
+        // This function handles the click
+        function handleBtnClick() {
+            window.OneSignalDeferred.push(async function(OneSignal) {
+                console.log("Button clicked, checking permission...");
+                try {
+                    await OneSignal.Notifications.requestPermission();
+                } catch (err) {
+                    console.error("Prompt failed:", err);
+                }
+            });
+        }
+
+        // Attach the click event to the button
+        document.getElementById('btn').onclick = handleBtnClick;
+    </script>
 </body>
 </html>
