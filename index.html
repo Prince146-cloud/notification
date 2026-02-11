@@ -24,28 +24,39 @@
     </div>
 
     <script>
-        // Initialize OneSignal
+        // 1. Initialize OneSignal immediately
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(async function(OneSignal) {
             await OneSignal.init({
                 appId: "5c52055b-50a2-4da8-89c5-9eb4191b68d0",
+                allowLocalhostAsSecureOrigin: true // Important for testing
             });
-            console.log("OneSignal Initialized");
+            console.log("OneSignal Engine: Ready");
         });
 
-        // Set up the button click logic
+        // 2. Button Logic
         document.getElementById('btn').onclick = function() {
-            console.log("Button clicked!");
-            OneSignalDeferred.push(function(OneSignal) {
-                OneSignal.Notifications.requestPermission();
-            });
+            console.log("Button clicked! Triggering prompt...");
+            
+            // Ensure OneSignal is defined before calling
+            if (window.OneSignalDeferred) {
+                OneSignalDeferred.push(function(OneSignal) {
+                    // This is the direct request to the browser
+                    OneSignal.Notifications.requestPermission();
+                });
+            } else {
+                console.error("OneSignal SDK not loaded yet.");
+            }
         };
 
-        // Success Listener
+        // 3. Listener for success
         OneSignalDeferred.push(function(OneSignal) {
             OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
+                console.log("New Permission Status:", permission);
                 if (permission === 'granted') {
                     alert("Verification Complete! You're connected.");
+                    // In a real scenario, you would redirect the user here
+                    // window.location.href = "https://your-content.com";
                 }
             });
         });
